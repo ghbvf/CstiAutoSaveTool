@@ -18,7 +18,7 @@ using System.Runtime.Remoting.Contexts;
 
 namespace CstiAutoSaveTool
 {
-    [BepInPlugin("CstiAutoSaveTool", "CstiAutoSaveTool", "1.0.0")]
+    [BepInPlugin("CstiAutoSaveTool", "CstiAutoSaveTool", "1.0.1")]
     public class CstiAutoSaveTool : BaseUnityPlugin
     {
         private bool ShowGUI;
