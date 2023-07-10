@@ -16,7 +16,7 @@ F5 存档
 
 F6 加载最后一次游戏存档
 
-F7 打开存档管理界面
+F3 打开存档管理界面
 ![image](https://github.com/ghbvf/CstiAutoSaveTool/assets/104540935/09f8640e-d590-4bc9-9458-726a542118c0)
 
 
@@ -35,7 +35,8 @@ F5 Archive
 
 F6 Load the last save game
 
-F7 Open Backup File Manage Page
+F3 Open Backup File Manage Page
+![image](https://github.com/ghbvf/CstiAutoSaveTool/assets/104540935/09f8640e-d590-4bc9-9458-726a542118c0)
 
 You can view BepinEx log
 ![image](https://github.com/ghbvf/CstiAutoSaveTool/assets/104540935/dfadf947-b762-4755-a741-d9a0306f1a25)
