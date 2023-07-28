@@ -15,10 +15,11 @@ using BepInEx.Configuration;
 using static System.Net.Mime.MediaTypeNames;
 using System.Xml.Linq;
 using System.Runtime.Remoting.Contexts;
+using System.Reflection;
 
 namespace CstiAutoSaveTool
 {
-    [BepInPlugin("CstiAutoSaveTool", "CstiAutoSaveTool", "1.0.1")]
+    [BepInPlugin("CstiAutoSaveTool", "CstiAutoSaveTool", "1.0.3")]
     public class CstiAutoSaveTool : BaseUnityPlugin
     {
         private bool ShowGUI;
@@ -103,6 +104,7 @@ namespace CstiAutoSaveTool
         {
             GameLoad.Instance.AutoSaveGame(false);
             Log.LogInfo("Save Game");
+            NotifyGameSaved();
         }
 
         public static void SaveAndBackup(GameManager __instance)
@@ -140,6 +142,7 @@ namespace CstiAutoSaveTool
             {
                 File.Copy(gameFilePath, backupGameFilePath);
                 Log.LogInfo(string.Format("Copy File \"{0}\" To \"{1}\"", gameFilePath, backupGameFilePath));
+                NotifyGameSaved();
             }
             string gameInfo = string.Format("GameTime:Slot_{0} {1}Days{2}Hour{3}Minute  ", currentGameDataIndex + 1, currentGameDay, currentGameHour, currentGameMinute, currentTime);
             File.WriteAllText(string.Format("{0}/index", backupPath), currentGameDataIndex.ToString());
@@ -168,6 +171,10 @@ namespace CstiAutoSaveTool
 
         private void FilesGUI()
         {
+            GUIStyle style = new GUIStyle()
+            {
+                alignment = TextAnchor.MiddleCenter,
+            };
             GUILayout.BeginVertical("box", Array.Empty<GUILayoutOption>());
             GUILayout.BeginHorizontal(Array.Empty<GUILayoutOption>());
             GUILayout.Label("CstiAutoSaveTool", Array.Empty<GUILayoutOption>());
@@ -180,8 +187,8 @@ namespace CstiAutoSaveTool
             this.FilesListScrollView = GUILayout.BeginScrollView(this.FilesListScrollView, new GUILayoutOption[] { GUILayout.ExpandHeight(true) });
             DirectoryInfo folder = new DirectoryInfo(BackupsPath);
             DirectoryInfo[] directoryInfos = folder.GetDirectories();
-
-            MaxPages = directoryInfos.Length / 10 + 1;
+            SortAsFileCreationTime(ref directoryInfos);
+            MaxPages = (directoryInfos.Length - 1) / 10 + 1;
             for (int i = 0; i < directoryInfos.Length; i++)
             {
                 if (i <= 10 * this.CurrentPage - 1)
@@ -202,13 +209,13 @@ namespace CstiAutoSaveTool
                         GUILayout.BeginHorizontal("box", Array.Empty<GUILayoutOption>());
                         GUILayout.Label(string.Format("{0}\r\nDirectoryPath:{1}", gameInfo, dir.Name), Array.Empty<GUILayoutOption>());
                         GUILayout.FlexibleSpace();
-                        if (GUILayout.Button("Load", Array.Empty<GUILayoutOption>()))
+                        if (GUILayout.Button("Load", new GUILayoutOption[] { }))
                         {
                             LoadBackupGame(dir.FullName);
                         }
                         else if (GUILayout.Button("Delete", new GUILayoutOption[] { }))
                         {
-                            if(dir.Exists)
+                            if (dir.Exists)
                             {
                                 DeleteBackupFile(dir.FullName);
                             }
@@ -216,8 +223,8 @@ namespace CstiAutoSaveTool
                         GUILayout.EndHorizontal();
                     }
                 }
-                catch 
-                { 
+                catch
+                {
 
                 }
             }
@@ -258,23 +265,23 @@ namespace CstiAutoSaveTool
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
-   
+
         private void MenuGui()
         {
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal(Array.Empty<GUILayoutOption>());
-            if (GUILayout.Button("Save And Backup", new GUILayoutOption[] { }))
+            if (GUILayout.Button("Save And Backup", new GUILayoutOption[] { GUILayout.Height(Screen.height * 0.7f * 0.05f) }))
             {
                 GameManager __instance = GameManager.Instance;
                 SaveAndBackup(__instance);
             }
-            if (GUILayout.Button("Load Last Game", new GUILayoutOption[] { }))
+            if (GUILayout.Button("Load Last Game", new GUILayoutOption[] { GUILayout.Height(Screen.height * 0.7f * 0.05f) }))
             {
                 //this.ShowGUI = false;
                 GameManager __instance = GameManager.Instance;
                 LoadGame(__instance);
             }
-            if (GUILayout.Button("Close", new GUILayoutOption[]{ }))
+            if (GUILayout.Button("Close", new GUILayoutOption[] { GUILayout.Height(Screen.height * 0.7f * 0.05f) }))
             {
                 this.ShowGUI = false;
             }
@@ -282,7 +289,7 @@ namespace CstiAutoSaveTool
             GUILayout.EndVertical();
         }
 
-        private static void  DeleteBackupFile(string backupPath)
+        private static void DeleteBackupFile(string backupPath)
         {
             string backupGamePath = string.Format("{0}/{1}", backupPath, "Games");
             try
@@ -290,7 +297,7 @@ namespace CstiAutoSaveTool
                 if (Directory.Exists(backupGamePath))
                 {
                     DirectoryInfo dir = new DirectoryInfo(backupGamePath);
-                    foreach(FileInfo file in dir.GetFiles())
+                    foreach (FileInfo file in dir.GetFiles())
                     {
                         file.Delete();
                     }
@@ -308,8 +315,8 @@ namespace CstiAutoSaveTool
                 }
             }
             catch
-            { 
-                
+            {
+
             }
 
         }
@@ -334,8 +341,22 @@ namespace CstiAutoSaveTool
                 File.Copy(backupGameFilePath, gameFilePath, true);
                 Log.LogInfo(string.Format("Copy File \"{0}\" To \"{1}\"", backupGameFilePath, gameFilePath));
             }
-            GameManager __instance = GameManager.Instance;
+            GameLoad.Instance.LoadMainGameData();
+            var method = Traverse.Create(GameLoad.Instance).Method("LoadGameFile", backupGameFilePath);
+            method.GetValue(backupGameFilePath);
             GameLoad.Instance.LoadGame(backupGameDataIndex);
+        }
+
+        private void SortAsFileCreationTime(ref DirectoryInfo[] arrFi)
+        {
+            Array.Sort(arrFi, delegate (DirectoryInfo x, DirectoryInfo y) { return y.CreationTime.CompareTo(x.CreationTime); });
+        }
+
+        public static void NotifyGameSaved()
+        {
+            var GM = GraphicsManager.Instance;
+            GM.PlayMessage(GM.TimeSpentWheel.transform.position, "Game Saved", GM.TimeSpentWheel.transform);
+
         }
 
     }
